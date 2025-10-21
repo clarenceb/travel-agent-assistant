@@ -1,26 +1,17 @@
 import os
-import re
 import time
 import streamlit as st
-import streamlit.components.v1 as components
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
-
-# Mermaid: prefer streamlit-mermaid, fall back to a small HTML component
-try:
-    import streamlit_mermaid as stmd
-    HAS_STMD = True
-except Exception:
-    HAS_STMD = False
 
 from azure.identity import DefaultAzureCredential
 from azure.ai.projects import AIProjectClient
 from azure.ai.agents.models import ListSortOrder, MessageTextContent
 
 # ------------- Config -------------
-st.set_page_config(page_title="Azure Agent Chat with Mermaid", page_icon="🤖", layout="centered")
+st.set_page_config(page_title="Travel Agent Assistant", page_icon="🤖", layout="centered")
 
 PROJECT_ENDPOINT = os.environ.get("PROJECT_ENDPOINT")
 MODEL_DEPLOYMENT_NAME = os.environ.get("MODEL_DEPLOYMENT_NAME")
@@ -55,12 +46,10 @@ def create_or_get_agent(agents_client):
     # Create a simple, reusable agent with default instructions
     agent = agents_client.create_agent(
         model=MODEL_DEPLOYMENT_NAME,
-        name="streamlit-mermaid-agent",
+        name="streamlit-agent",
         instructions=(
             "You are a helpful assistant. "
-            "When appropriate, you may return Mermaid diagrams inside triple-backtick fenced blocks "
-            "with the language identifier 'mermaid'. "
-            "You may also return Markdown, text, or image links."
+            "You may return Markdown, text, or image links."
         )
     )
     st.session_state.agent_id = agent.id
@@ -73,58 +62,18 @@ def get_or_create_thread(agents_client):
         st.session_state.seen_message_ids = set()  # for incremental display
     return st.session_state.thread_id
 
-MERMAID_REGEX = re.compile(r"```mermaid\s+([\s\S]*?)```", re.IGNORECASE)
-
-def split_text_into_segments(text: str):
-    """
-    Split a text message into segments of {"type": "markdown"|"mermaid", "content": str}.
-    """
-    segments = []
-    last_end = 0
-    for m in MERMAID_REGEX.finditer(text):
-        if m.start() > last_end:
-            segments.append({"type": "markdown", "content": text[last_end:m.start()]})
-        segments.append({"type": "mermaid", "content": m.group(1).strip()})
-        last_end = m.end()
-    if last_end < len(text):
-        segments.append({"type": "markdown", "content": text[last_end:]})
-    return segments
-
-def render_mermaid(code: str, height: int = 480):
-    """
-    Render Mermaid using streamlit-mermaid if available, else via a small HTML component.
-    """
-    if HAS_STMD:
-        stmd.st_mermaid(code)
-        return
-    # Fallback: inline mermaid.js (ESM) from CDN
-    components.html(
-        f"""
-        <pre class="mermaid">{code}</pre>
-        <script type="module">
-            import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-            mermaid.initialize({{ startOnLoad: true }});
-        </script>
-        """,
-        height=height,
-    )
-
-def render_text_with_mermaid(text: str):
-    """
-    Render text that may contain: normal Markdown and ```mermaid``` fenced blocks.
-    """
-    segments = split_text_into_segments(text)
-    for seg in segments:
-        if seg["type"] == "markdown":
-            if seg["content"].strip():
-                st.markdown(seg["content"])
-        else:  # mermaid
-            render_mermaid(seg["content"])
+def reset_conversation(agents_client):
+    """Create a new thread and clear chat history."""
+    thread = agents_client.threads.create()
+    st.session_state.thread_id = thread.id
+    st.session_state.seen_message_ids = set()
+    st.session_state.history = []
+    return thread.id
 
 def display_new_assistant_messages(agents_client, thread_id: str):
     """
     Fetch thread messages in ascending order and display only new 'assistant' messages.
-    Handles text (incl. Mermaid) and images via markdown image URLs.
+    Handles text and images via markdown image URLs.
     """
     from azure.ai.agents.models import MessageImageFileContent  # doc ref: class exists
     messages = agents_client.messages.list(thread_id=thread_id, order=ListSortOrder.ASCENDING)
@@ -140,7 +89,7 @@ def display_new_assistant_messages(agents_client, thread_id: str):
                 for part in msg.content:
                     # Text content
                     if isinstance(part, MessageTextContent):
-                        render_text_with_mermaid(part.text.value)
+                        st.markdown(part.text.value)
                     # Image file content from the Agents service (advanced)
                     elif part.type == "image_file":
                         # The SDK exposes MessageImageFileContent with image_file.file_id.
@@ -159,7 +108,7 @@ def display_new_assistant_messages(agents_client, thread_id: str):
                         st.write(part)
 
 # ------------- UI -------------
-st.title("🤖 Azure Agent Chat + Mermaid")
+st.title("🤖 Travel Agent Assistant")
 
 if "history" not in st.session_state:
     st.session_state.history = []
@@ -168,13 +117,17 @@ project_client, agents_client = get_clients()
 agent_id = create_or_get_agent(agents_client)
 thread_id = get_or_create_thread(agents_client)
 
+# Sidebar with New Chat button
+with st.sidebar:
+    st.header("Chat Controls")
+    if st.button("🔄 New Chat", use_container_width=True):
+        reset_conversation(agents_client)
+        st.rerun()
+
 # show previous turns
 for name, content in st.session_state.history:
     with st.chat_message(name):
-        if name == "assistant":
-            render_text_with_mermaid(content)
-        else:
-            st.markdown(content)
+        st.markdown(content)
 
 # input
 user_prompt = st.chat_input("Type your message…")
@@ -196,6 +149,5 @@ if user_prompt:
     display_new_assistant_messages(agents_client, thread_id)
 
 st.caption(
-    "Tip: To reuse an existing Agent across sessions, set the AGENT_ID env var. "
-    "Otherwise this app creates an Agent for the session."
+    "Tip: Ask for help to plan your itinerary for a trip in Europe or Asia!"
 )

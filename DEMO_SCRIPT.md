@@ -29,3 +29,8 @@ Let the agent ask questions about budget, duration, preferences.
 - Recap how the agent used tools and logic.
 - Invite students to think about other use cases.
 - Encourage them to explore building agents themselves.
+
+## Sample questions
+
+- I want to plan a 5 day trip to Europe for 2 adults, with great fitness levels, keen on food and beaches.
+- Moderate budget, vegetarian, coastal towns, mediterrean, any dates, any transport, budget accomodation
