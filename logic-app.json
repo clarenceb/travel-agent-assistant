@@ -64,6 +64,18 @@
             "$connections": {
                 "type": "Object",
                 "defaultValue": {}
+            },
+            "subscriptionId": {
+                "type": "String",
+                "defaultValue": "your-subscription-id"
+            },
+            "resourceGroupName": {
+                "type": "String",
+                "defaultValue": "rg-travel-agent"
+            },
+            "location": {
+                "type": "String",
+                "defaultValue": "australiaeast"
             }
         }
     },
@@ -72,8 +84,8 @@
             "type": "Object",
             "value": {
                 "outlook": {
-                    "id": "/subscriptions/f081830f-8351-4b7a-84e2-282552322f62/providers/Microsoft.Web/locations/australiaeast/managedApis/outlook",
-                    "connectionId": "/subscriptions/f081830f-8351-4b7a-84e2-282552322f62/resourceGroups/rg-travel-agent/providers/Microsoft.Web/connections/outlook",
+                    "id": "[concat('/subscriptions/', parameters('subscriptionId'), '/providers/Microsoft.Web/locations/', parameters('location'), '/managedApis/outlook')]",
+                    "connectionId": "[concat('/subscriptions/', parameters('subscriptionId'), '/resourceGroups/', parameters('resourceGroupName'), '/providers/Microsoft.Web/connections/outlook')]",
                     "connectionName": "outlook"
                 }
             }
