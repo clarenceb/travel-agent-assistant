@@ -7,7 +7,7 @@
 - Create an agent
 - Set the system prompt for the agent, see [AGENT_SYSTEM_PROMPT.md](AGENT_SYSTEM_PROMPT.md)
 - Add the knowledge tool: Grounding with Bing Search
-- Add the action tool: Logic App (create the logic app resource using [`logic-app.json`](./logic-app.json))
+- Add the action tool: Logic App (create the logic app consumption (multi-tenant) resource using [`logic-app.json`](./logic-app.json))
   - See [LOGIC_APP_TOOL.md](LOGIC_APP_TOOL.md) for setup steps
 
 ## Demo Script
